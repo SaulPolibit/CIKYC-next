@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // DIDit V2 uses x-api-key header
-    const response = await fetch(`https://verification.didit.me/v2/session/${sessionId}/report/pdf`, {
+    // DIDit generate-pdf endpoint (v1) https://docs.didit.me/reference/generate-pdf-verification-sessions
+    const response = await fetch(`https://verification.didit.me/v1/session/${sessionId}/generate-pdf`, {
       headers: {
         'x-api-key': token,
       },
