@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import type { User } from '@/types';
 
 export default function LoginPage() {
@@ -18,22 +19,37 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checkingStorage, setCheckingStorage] = useState(true);
 
-  // Check localStorage for existing user on mount
+  // Check localStorage AND Supabase session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('cikyc_user');
-    if (storedUser) {
-      try {
-        const user: User = JSON.parse(storedUser);
-        const userIsAdmin = user.role === '2' || user.role === '3';
-        router.push(userIsAdmin ? '/dashboard-admin' : '/dashboard');
-      } catch (e) {
-        console.error('Error parsing stored user:', e);
-        localStorage.removeItem('cikyc_user');
-        setCheckingStorage(false);
+    const checkExistingSession = async () => {
+      const storedUser = localStorage.getItem('cikyc_user');
+
+      if (storedUser) {
+        try {
+          // Verify Supabase session is still valid
+          const { data: { session } } = await supabase.auth.getSession();
+
+          if (session) {
+            // Both localStorage and session are valid - redirect
+            const user: User = JSON.parse(storedUser);
+            const userIsAdmin = user.role === '2' || user.role === '3';
+            router.push(userIsAdmin ? '/dashboard-admin' : '/dashboard');
+            return;
+          } else {
+            // Session expired but localStorage exists - clear it
+            console.log('Session expired, clearing localStorage');
+            localStorage.removeItem('cikyc_user');
+          }
+        } catch (e) {
+          console.error('Error checking session:', e);
+          localStorage.removeItem('cikyc_user');
+        }
       }
-    } else {
+
       setCheckingStorage(false);
-    }
+    };
+
+    checkExistingSession();
   }, [router]);
 
   const validateEmail = (email: string) => {

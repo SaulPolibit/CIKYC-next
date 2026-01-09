@@ -96,8 +96,9 @@ export default function ResetPasswordPage() {
 
       setSuccess(true);
 
-      // Sign out after password change and redirect to login
+      // Clear localStorage and sign out after password change, then redirect to login
       setTimeout(async () => {
+        localStorage.removeItem('cikyc_user');
         await supabase.auth.signOut();
         router.push('/login');
       }, 3000);
