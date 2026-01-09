@@ -23,8 +23,6 @@ export default function AddUserPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // User management state
-  const [selectedUserId, setSelectedUserId] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -101,15 +99,7 @@ export default function AddUserPage() {
     }
   };
 
-  const handleToggleUser = async () => {
-    if (!selectedUserId) {
-      setError('Seleccione un usuario');
-      return;
-    }
-
-    const user = users.find(u => u.id === selectedUserId);
-    if (!user) return;
-
+  const handleToggleUser = async (user: User) => {
     const newStatus = !user.is_active;
     const action = newStatus ? 'habilitar' : 'deshabilitar';
 
@@ -122,7 +112,6 @@ export default function AddUserPage() {
     try {
       await toggleUserStatus(user.id, user.email, newStatus);
       setSuccess(`Usuario ${newStatus ? 'habilitado' : 'deshabilitado'} exitosamente`);
-      setSelectedUserId('');
       fetchUsers();
     } catch (error) {
       console.error('Error toggling user:', error);
@@ -139,8 +128,6 @@ export default function AddUserPage() {
     setConfirmPassword('');
     setRole('');
   };
-
-  const selectedUser = users.find(u => u.id === selectedUserId);
 
   return (
     <div className="p-6">
@@ -268,70 +255,6 @@ export default function AddUserPage() {
       {/* Divider */}
       <div className="h-px bg-[#E0E3E7] my-10 max-w-[800px]" />
 
-      {/* Manage Users Section */}
-      <h2 className="text-[24px] font-semibold text-[#212121] mb-6 text-center max-w-[800px]">
-        Baja de Usuario
-      </h2>
-
-      <div className="max-w-[800px]">
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <label className="text-[14px] text-[#212121]">
-            Nombre:
-          </label>
-          <select
-            value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
-            className="w-[250px] h-[44px] px-3 text-[14px] text-[#212121] bg-white border border-[#E0E3E7] rounded-lg outline-none transition-colors focus:border-[#434447]"
-          >
-            <option value="">Seleccione...</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name || user.email} {!user.is_active ? '(Deshabilitado)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedUser && (
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center gap-2 text-[14px]">
-              <span className="text-[#57636C]">Estado:</span>
-              <span className={selectedUser.is_active ? 'text-[#249689]' : 'text-[#FF5963]'}>
-                {selectedUser.is_active ? 'Activo' : 'Deshabilitado'}
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-center">
-          <button
-            onClick={handleToggleUser}
-            disabled={!selectedUserId || togglingId !== null}
-            className="h-[44px] px-12 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {togglingId ? (
-              <>
-                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Procesando...
-              </>
-            ) : selectedUser?.is_active ? (
-              <>
-                <UserX className="h-4 w-4" />
-                Deshabilitar
-              </>
-            ) : (
-              <>
-                <UserCheck className="h-4 w-4" />
-                {selectedUserId ? 'Habilitar' : 'Borrar'}
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div className="h-px bg-[#E0E3E7] my-10 max-w-[800px]" />
-
       {/* Users List */}
       <h2 className="text-[24px] font-semibold text-[#212121] mb-6 max-w-[800px]">
         Usuarios del Sistema
@@ -399,19 +322,18 @@ export default function AddUserPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setSelectedUserId(user.id);
-                    // Scroll to the toggle section
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className={`p-2 rounded-lg transition-colors ${
+                  onClick={() => handleToggleUser(user)}
+                  disabled={togglingId === user.id}
+                  className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
                     user.is_active
                       ? 'text-[#FF5963] hover:bg-[#FF5963]/10'
                       : 'text-[#249689] hover:bg-[#249689]/10'
                   }`}
                   title={user.is_active ? 'Deshabilitar usuario' : 'Habilitar usuario'}
                 >
-                  {user.is_active ? (
+                  {togglingId === user.id ? (
+                    <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : user.is_active ? (
                     <UserX className="h-5 w-5" />
                   ) : (
                     <UserCheck className="h-5 w-5" />
