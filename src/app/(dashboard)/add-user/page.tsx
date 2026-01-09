@@ -115,7 +115,7 @@ export default function AddUserPage() {
 
     setDeletingId(user.id);
     try {
-      await deleteUser(user.id);
+      await deleteUser(user.id, user.email);
       setSuccess('Usuario eliminado exitosamente');
       fetchUsers();
     } catch (error) {

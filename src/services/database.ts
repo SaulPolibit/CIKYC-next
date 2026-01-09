@@ -47,13 +47,21 @@ export async function addUser(userData: Omit<User, 'id' | 'created_at'>): Promis
   return data;
 }
 
-export async function deleteUser(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from('users')
-    .delete()
-    .eq('id', userId);
+export async function deleteUser(userId: string, email?: string): Promise<void> {
+  const params = new URLSearchParams({ id: userId });
+  if (email) {
+    params.append('email', email);
+  }
 
-  if (error) throw error;
+  const response = await fetch(`/api/admin/users?${params.toString()}`, {
+    method: 'DELETE',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to delete user');
+  }
 }
 
 // Verified users collection operations
@@ -132,27 +140,24 @@ export function filterVerifiedUsers(
   return filtered;
 }
 
-// Sign up user (creates auth user and database record)
+// Sign up user (creates auth user and database record via admin API)
 export async function signUpUser(
   email: string,
   password: string,
   name: string,
   role: string
 ): Promise<void> {
-  // Create auth user
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
+  const response = await fetch('/api/admin/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password, name, role }),
   });
 
-  if (authError) throw authError;
+  const data = await response.json();
 
-  // Add user to database
-  if (authData.user) {
-    await addUser({
-      email,
-      name,
-      role: role as '1' | '2' | '3',
-    });
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to create user');
   }
 }
