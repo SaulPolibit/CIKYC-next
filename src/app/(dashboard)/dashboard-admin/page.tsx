@@ -150,15 +150,15 @@ export default function DashboardAdminPage() {
                 <div className="flex items-center gap-4 pb-1">
                   <div className="flex items-center gap-2">
                     <User className="h-5 w-5 text-[#212121]" />
-                    <span className="text-[12px] text-[#434447]">Cliente:</span>
-                    <span className="text-[12px] font-bold text-[#212121]">
+                    <span className="text-[12px] font-bold text-[#434447]">Cliente:</span>
+                    <span className="text-[12px] text-[#212121]">
                       {user.name}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="h-5 w-5 text-[#39D2C0]" />
-                    <span className="text-[12px] text-[#434447]">Asesor:</span>
-                    <span className="text-[12px] font-medium text-[#212121]">
+                    <span className="text-[12px] font-bold text-[#434447]">Asesor:</span>
+                    <span className="text-[12px] text-[#212121]">
                       {user.agent_email}
                     </span>
                   </div>
