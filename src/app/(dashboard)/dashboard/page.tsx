@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, X, Info, User } from 'lucide-react';
+import { Search, X, Info, User, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllVerifiedUsers, filterVerifiedUsers } from '@/services/database';
+import { getToken, downloadPDF } from '@/services/api';
 import { ChoiceChips } from '@/components/choice-chips';
 import type { VerifiedUser, KYCStatusSpanish } from '@/types';
 import { KYC_STATUS_OPTIONS, statusMap, statusReverseMap } from '@/types';
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [searchString, setSearchString] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -62,6 +64,21 @@ export default function DashboardPage() {
 
   const clearSearch = () => {
     setSearchString('');
+  };
+
+  const handleDownloadPDF = async (user: VerifiedUser) => {
+    if (!user.kyc_id) return;
+
+    setDownloadingPDF(user.id);
+    try {
+      const tokenResponse = await getToken();
+      await downloadPDF(user.kyc_id, tokenResponse.token);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Error al descargar el PDF. Intente nuevamente.');
+    } finally {
+      setDownloadingPDF(null);
+    }
   };
 
   return (
@@ -129,9 +146,19 @@ export default function DashboardPage() {
               <div key={user.id} className="bg-white">
                 <div className="flex items-center gap-2.5 pb-1">
                   <User className="h-6 w-6 text-[#212121]" />
-                  <span className="text-[12px] font-bold text-[#212121]">
+                  <span className="text-[12px] font-bold text-[#212121] flex-1">
                     {user.name}
                   </span>
+                  {user.kyc_id && user.kyc_status === 'Approved' && (
+                    <button
+                      onClick={() => handleDownloadPDF(user)}
+                      disabled={downloadingPDF === user.id}
+                      title="Descargar PDF"
+                      className="p-1.5 text-[#434447] hover:text-[#212121] hover:bg-[#E0E3E7] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Download className="h-[18px] w-[18px]" />
+                    </button>
+                  )}
                 </div>
                 <div className="pl-[44px]">
                   <div className="flex py-1">
