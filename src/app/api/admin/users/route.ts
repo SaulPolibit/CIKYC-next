@@ -17,6 +17,13 @@ function getSupabaseAdmin(): SupabaseClient {
   });
 }
 
+// Helper to get auth user by email
+async function getAuthUserByEmail(supabaseAdmin: SupabaseClient, email: string) {
+  const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+  return authUsers?.users.find(u => u.email === email);
+}
+
+// CREATE user
 export async function POST(request: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -34,7 +41,7 @@ export async function POST(request: NextRequest) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // This bypasses email confirmation
+      email_confirm: true,
     });
 
     if (authError) {
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add user to users table
+    // Add user to users table with is_active=true
     const { data: userData, error: dbError } = await supabaseAdmin
       .from('users')
       .insert([
@@ -60,6 +67,7 @@ export async function POST(request: NextRequest) {
           email,
           name,
           role,
+          is_active: true,
         },
       ])
       .select()
@@ -67,8 +75,6 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error('Database error creating user:', dbError);
-      // If DB insert fails, we should ideally delete the auth user
-      // but for simplicity we'll just return the error
       return NextResponse.json(
         { error: `Database error: ${dbError.message}` },
         { status: 500 }
@@ -88,12 +94,78 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// TOGGLE user active status (enable/disable)
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { userId, email, isActive } = await request.json();
+
+    if (!userId || !email || typeof isActive !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Missing required fields: userId, email, isActive' },
+        { status: 400 }
+      );
+    }
+
+    // Update is_active in users table
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .update({ is_active: isActive })
+      .eq('id', userId);
+
+    if (dbError) {
+      console.error('Database error updating user:', dbError);
+      return NextResponse.json(
+        { error: `Database error: ${dbError.message}` },
+        { status: 500 }
+      );
+    }
+
+    // Get auth user and ban/unban
+    const authUser = await getAuthUserByEmail(supabaseAdmin, email);
+    if (authUser) {
+      if (isActive) {
+        // Unban user (set ban_duration to 'none' removes the ban)
+        const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+          authUser.id,
+          { ban_duration: 'none' }
+        );
+        if (authError) {
+          console.error('Auth error unbanning user:', authError);
+        }
+      } else {
+        // Ban user permanently (until manually unbanned)
+        const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+          authUser.id,
+          { ban_duration: '876600h' } // ~100 years
+        );
+        if (authError) {
+          console.error('Auth error banning user:', authError);
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      isActive,
+    });
+  } catch (error) {
+    console.error('Error toggling user status:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', details: String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+// SOFT DELETE (disable user - same as PATCH with isActive=false)
 export async function DELETE(request: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
     const email = searchParams.get('email');
+    const hardDelete = searchParams.get('hardDelete') === 'true';
 
     if (!userId) {
       return NextResponse.json(
@@ -102,31 +174,57 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete from users table first
-    const { error: dbError } = await supabaseAdmin
-      .from('users')
-      .delete()
-      .eq('id', userId);
+    if (hardDelete) {
+      // Permanent delete - remove from database and auth
+      const { error: dbError } = await supabaseAdmin
+        .from('users')
+        .delete()
+        .eq('id', userId);
 
-    if (dbError) {
-      console.error('Database error deleting user:', dbError);
-      return NextResponse.json(
-        { error: `Database error: ${dbError.message}` },
-        { status: 500 }
-      );
-    }
+      if (dbError) {
+        console.error('Database error deleting user:', dbError);
+        return NextResponse.json(
+          { error: `Database error: ${dbError.message}` },
+          { status: 500 }
+        );
+      }
 
-    // If we have email, try to delete from auth as well
-    if (email) {
-      // First get the auth user by email
-      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const authUser = authUsers?.users.find(u => u.email === email);
+      // Delete from auth if email provided
+      if (email) {
+        const authUser = await getAuthUserByEmail(supabaseAdmin, email);
+        if (authUser) {
+          const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+          if (authError) {
+            console.error('Auth error deleting user:', authError);
+          }
+        }
+      }
+    } else {
+      // Soft delete - just disable the user
+      const { error: dbError } = await supabaseAdmin
+        .from('users')
+        .update({ is_active: false })
+        .eq('id', userId);
 
-      if (authUser) {
-        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-        if (authError) {
-          console.error('Auth error deleting user:', authError);
-          // Don't fail the request, user is already deleted from DB
+      if (dbError) {
+        console.error('Database error disabling user:', dbError);
+        return NextResponse.json(
+          { error: `Database error: ${dbError.message}` },
+          { status: 500 }
+        );
+      }
+
+      // Ban auth user if email provided
+      if (email) {
+        const authUser = await getAuthUserByEmail(supabaseAdmin, email);
+        if (authUser) {
+          const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+            authUser.id,
+            { ban_duration: '876600h' }
+          );
+          if (authError) {
+            console.error('Auth error banning user:', authError);
+          }
         }
       }
     }

@@ -4,6 +4,7 @@ export interface User {
   email: string;
   name: string;
   role: '1' | '2' | '3'; // 1 = Agent, 2 = Operator Admin, 3 = Organization Admin
+  is_active: boolean;
   created_at?: string;
 }
 

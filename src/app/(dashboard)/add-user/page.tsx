@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserPlus, Trash2 } from 'lucide-react';
-import { getUsers, deleteUser, signUpUser } from '@/services/database';
+import { UserPlus, UserX, UserCheck } from 'lucide-react';
+import { getUsers, deleteUser, signUpUser, toggleUserStatus } from '@/services/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +22,7 @@ export default function AddUserPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -108,21 +108,24 @@ export default function AddUserPage() {
     }
   };
 
-  const handleDeleteUser = async (user: User) => {
-    if (!window.confirm(`¿Está seguro de eliminar a ${user.name || user.email}?`)) {
+  const handleToggleUser = async (user: User) => {
+    const newStatus = !user.is_active;
+    const action = newStatus ? 'habilitar' : 'deshabilitar';
+
+    if (!window.confirm(`¿Está seguro de ${action} a ${user.name || user.email}?`)) {
       return;
     }
 
-    setDeletingId(user.id);
+    setTogglingId(user.id);
     try {
-      await deleteUser(user.id, user.email);
-      setSuccess('Usuario eliminado exitosamente');
+      await toggleUserStatus(user.id, user.email, newStatus);
+      setSuccess(`Usuario ${newStatus ? 'habilitado' : 'deshabilitado'} exitosamente`);
       fetchUsers();
     } catch (error) {
-      console.error('Error deleting user:', error);
-      setError('Error al eliminar el usuario');
+      console.error('Error toggling user:', error);
+      setError(`Error al ${action} el usuario`);
     } finally {
-      setDeletingId(null);
+      setTogglingId(null);
     }
   };
 
@@ -243,7 +246,16 @@ export default function AddUserPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Usuarios del Sistema</CardTitle>
-            <Badge variant="secondary">{users.length} usuarios</Badge>
+            <div className="flex gap-2">
+              <Badge variant="secondary">
+                {users.filter((u) => u.is_active).length} activos
+              </Badge>
+              {users.filter((u) => !u.is_active).length > 0 && (
+                <Badge variant="destructive">
+                  {users.filter((u) => !u.is_active).length} deshabilitados
+                </Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -258,18 +270,39 @@ export default function AddUserPage() {
                 {users.map((user) => (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                    className={`flex items-center justify-between p-4 rounded-lg transition-colors ${
+                      user.is_active
+                        ? 'bg-muted/50 hover:bg-muted'
+                        : 'bg-destructive/5 border border-destructive/20'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/60 text-white flex items-center justify-center text-base font-semibold">
+                      <div
+                        className={`h-10 w-10 rounded-full text-white flex items-center justify-center text-base font-semibold ${
+                          user.is_active
+                            ? 'bg-gradient-to-br from-primary to-primary/60'
+                            : 'bg-muted-foreground/50'
+                        }`}
+                      >
                         {(user.name || user.email || '?')
                           .charAt(0)
                           .toUpperCase()}
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium text-foreground">
-                          {user.name || 'Sin nombre'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-sm font-medium ${
+                              user.is_active ? 'text-foreground' : 'text-muted-foreground line-through'
+                            }`}
+                          >
+                            {user.name || 'Sin nombre'}
+                          </span>
+                          {!user.is_active && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                              Deshabilitado
+                            </Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {user.email}
                         </span>
@@ -281,14 +314,21 @@ export default function AddUserPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDeleteUser(user)}
-                      disabled={deletingId === user.id}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleToggleUser(user)}
+                      disabled={togglingId === user.id}
+                      title={user.is_active ? 'Deshabilitar usuario' : 'Habilitar usuario'}
+                      className={
+                        user.is_active
+                          ? 'text-destructive hover:text-destructive hover:bg-destructive/10'
+                          : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10'
+                      }
                     >
-                      {deletingId === user.id ? (
-                        <div className="h-4 w-4 border-2 border-muted border-t-destructive rounded-full animate-spin" />
+                      {togglingId === user.id ? (
+                        <div className="h-4 w-4 border-2 border-muted border-t-current rounded-full animate-spin" />
+                      ) : user.is_active ? (
+                        <UserX className="h-4 w-4" />
                       ) : (
-                        <Trash2 className="h-4 w-4" />
+                        <UserCheck className="h-4 w-4" />
                       )}
                     </Button>
                   </div>

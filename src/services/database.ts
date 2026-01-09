@@ -47,10 +47,13 @@ export async function addUser(userData: Omit<User, 'id' | 'created_at'>): Promis
   return data;
 }
 
-export async function deleteUser(userId: string, email?: string): Promise<void> {
+export async function deleteUser(userId: string, email?: string, hardDelete = false): Promise<void> {
   const params = new URLSearchParams({ id: userId });
   if (email) {
     params.append('email', email);
+  }
+  if (hardDelete) {
+    params.append('hardDelete', 'true');
   }
 
   const response = await fetch(`/api/admin/users?${params.toString()}`, {
@@ -61,6 +64,22 @@ export async function deleteUser(userId: string, email?: string): Promise<void> 
 
   if (!response.ok) {
     throw new Error(data.error || 'Failed to delete user');
+  }
+}
+
+export async function toggleUserStatus(userId: string, email: string, isActive: boolean): Promise<void> {
+  const response = await fetch('/api/admin/users', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ userId, email, isActive }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update user status');
   }
 }
 
