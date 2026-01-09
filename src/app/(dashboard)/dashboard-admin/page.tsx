@@ -147,11 +147,22 @@ export default function DashboardAdminPage() {
           <div className="flex flex-col">
             {filteredUsers.map((user) => (
               <div key={user.id} className="bg-white">
-                <div className="flex items-center gap-2.5 pb-1">
-                  <User className="h-6 w-6 text-[#212121]" />
-                  <span className="text-[12px] font-bold text-[#212121] flex-1">
-                    {user.name}
-                  </span>
+                <div className="flex items-center gap-4 pb-1">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-[#212121]" />
+                    <span className="text-[12px] text-[#434447]">Cliente:</span>
+                    <span className="text-[12px] font-bold text-[#212121]">
+                      {user.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-[#39D2C0]" />
+                    <span className="text-[12px] text-[#434447]">Asesor:</span>
+                    <span className="text-[12px] font-medium text-[#212121]">
+                      {user.agent_email}
+                    </span>
+                  </div>
+                  <div className="flex-1" />
                   {user.kyc_id && user.kyc_status === 'Approved' && (
                     <button
                       onClick={() => handleDownloadPDF(user)}
@@ -163,7 +174,7 @@ export default function DashboardAdminPage() {
                     </button>
                   )}
                 </div>
-                <div className="pl-[44px]">
+                <div className="pl-4 mt-1">
                   <div className="flex py-1">
                     <span className="flex-1 text-[14px] font-normal text-[#212121] text-center">
                       {user.user_email}
