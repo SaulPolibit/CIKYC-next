@@ -42,19 +42,16 @@ export function AppSidebar() {
   return (
     <aside className="w-[16vw] min-w-[200px] max-w-[280px] h-screen bg-[#F1F4F8] border-r border-[#E0E3E7] flex flex-col fixed left-0 top-0 z-50 py-6">
       {/* Logo */}
-      <div className="px-4 pb-3 flex justify-center">
+      <div className="px-4 pb-6 flex justify-center">
         <Image
           src="/ci_logo.png"
           alt="C-IKYC Logo"
-          width={170}
-          height={70}
-          className="object-cover rounded-lg"
+          width={150}
+          height={60}
+          className="object-cover"
           priority
         />
       </div>
-
-      {/* Divider */}
-      <div className="h-[2px] bg-[#E0E3E7] my-3" />
 
       {/* Navigation */}
       <nav className="flex-1 px-4 flex flex-col gap-3">
@@ -80,21 +77,21 @@ export function AppSidebar() {
       </nav>
 
       {/* Footer - User info */}
-      <div className="px-4 py-3 flex items-center justify-between">
-        <div className="flex flex-col gap-1 pl-3">
-          <span className="text-[16px] font-normal text-[#212121]">
-            {userData?.name || 'Usuario'}
+      <div className="px-4 pt-3 border-t border-[#E0E3E7]">
+        <div className="flex flex-col gap-0.5 pl-2">
+          <span className="text-[14px] font-medium text-[#212121]">
+            Usuario
           </span>
-          <span className="text-[12px] font-medium text-[#434447] break-all">
+          <span className="text-[12px] text-[#57636C] break-all">
             {currentUser?.email}
           </span>
         </div>
         <button
           onClick={handleLogout}
-          className="p-2 text-[#434447] hover:text-[#212121] transition-colors"
+          className="mt-3 p-2 text-[#434447] hover:text-[#212121] transition-colors"
           title="Cerrar sesión"
         >
-          <LogOut className="h-6 w-6" />
+          <LogOut className="h-5 w-5" />
         </button>
       </div>
     </aside>

@@ -1,14 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Link2, Send, Copy, CheckCircle, Mail, Settings } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getToken, createSession, launchWhatsApp, sendVerificationEmail } from '@/services/api';
 import { addVerifiedUser } from '@/services/database';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LinksVerificacionPage() {
   const { currentUser, userData } = useAuth();
@@ -18,7 +14,6 @@ export default function LinksVerificacionPage() {
   const [loading, setLoading] = useState(false);
   const [verificationUrl, setVerificationUrl] = useState('');
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
@@ -43,24 +38,20 @@ export default function LinksVerificacionPage() {
     return true;
   };
 
-  const handleGenerateLink = async () => {
+  const handleGenerateAndSendWhatsApp = async () => {
     setError('');
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      // Get token
       const tokenResponse = await getToken();
       const token = tokenResponse.token;
-
-      // Create session
       const sessionResponse = await createSession(token);
       const url = sessionResponse.url;
       const id = sessionResponse.sessionId;
 
       setVerificationUrl(url);
 
-      // Save to database
       await addVerifiedUser({
         name,
         phone,
@@ -72,6 +63,11 @@ export default function LinksVerificacionPage() {
         kyc_status: 'Not Started',
         downloaded: false,
       });
+
+      // Send via WhatsApp
+      const message = `Hola ${name}, le enviamos el siguiente enlace para completar su verificación de identidad (KYC):\n\n${url}\n\nPor favor complete el proceso lo antes posible.`;
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      launchWhatsApp(cleanPhone, message);
     } catch (error) {
       console.error('Error generating link:', error);
       setError('Error al generar el enlace. Intente nuevamente.');
@@ -80,35 +76,38 @@ export default function LinksVerificacionPage() {
     }
   };
 
-  const handleSendWhatsApp = () => {
-    if (!verificationUrl || !phone) return;
-
-    const message = `Hola ${name}, le enviamos el siguiente enlace para completar su verificación de identidad (KYC):\n\n${verificationUrl}\n\nPor favor complete el proceso lo antes posible.`;
-
-    // Clean phone number
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    launchWhatsApp(cleanPhone, message);
-  };
-
-  const handleCopyLink = async () => {
-    if (!verificationUrl) return;
-
-    try {
-      await navigator.clipboard.writeText(verificationUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Error copying to clipboard:', error);
-    }
-  };
-
   const handleSendEmail = async () => {
-    if (!verificationUrl || !email) return;
+    setError('');
+    if (!validateForm()) return;
 
     setSendingEmail(true);
-    setError('');
     try {
-      await sendVerificationEmail(email, name, verificationUrl);
+      let url = verificationUrl;
+
+      // Generate link if not already generated
+      if (!url) {
+        const tokenResponse = await getToken();
+        const token = tokenResponse.token;
+        const sessionResponse = await createSession(token);
+        url = sessionResponse.url;
+        const id = sessionResponse.sessionId;
+
+        setVerificationUrl(url);
+
+        await addVerifiedUser({
+          name,
+          phone,
+          user_email: email,
+          agent_email: currentUser?.email || '',
+          agent_name: userData?.name || currentUser?.email || '',
+          kyc_url: url,
+          kyc_id: id,
+          kyc_status: 'Not Started',
+          downloaded: false,
+        });
+      }
+
+      await sendVerificationEmail(email, name, url);
       setEmailSent(true);
       setTimeout(() => setEmailSent(false), 3000);
     } catch (error) {
@@ -129,177 +128,120 @@ export default function LinksVerificacionPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">
-          Generar Link de Verificación
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Crea enlaces de verificación KYC para enviar a tus clientes
-        </p>
-      </div>
+    <div className="p-6">
+      {/* Title */}
+      <h1 className="text-[28px] font-semibold text-[#212121] mb-6">
+        Link de verificación
+      </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-6">
-        {/* Form card */}
-        <Card>
-          <CardHeader className="border-b">
-            <div className="flex items-center gap-3">
-              <Link2 className="h-6 w-6 text-primary" />
-              <CardTitle>Datos del Cliente</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 flex flex-col gap-4">
-            {error && (
-              <div className="p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm">
-                {error}
-              </div>
-            )}
+      {/* Section title */}
+      <h2 className="text-[18px] font-semibold text-[#212121] mb-2">
+        Información del Cliente
+      </h2>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre Completo</Label>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Juan Pérez"
-                disabled={!!verificationUrl}
-              />
-            </div>
+      {/* Description */}
+      <p className="text-[14px] text-[#57636C] mb-8 max-w-[800px]">
+        Para generar el link de verificación y enviarlo por correo es necesario ingresar los datos del cliente y posteriormente presionar el botón de enviar.
+      </p>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Teléfono (con código de país)</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+52 1234567890"
-                disabled={!!verificationUrl}
-              />
-            </div>
+      {error && (
+        <div className="mb-6 p-3 bg-[#FF5963]/10 border border-[#FF5963] rounded-lg text-[#FF5963] text-sm max-w-[600px]">
+          {error}
+        </div>
+      )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="cliente@ejemplo.com"
-                disabled={!!verificationUrl}
-              />
-            </div>
+      {verificationUrl && (
+        <div className="mb-6 flex items-center gap-2 text-[#249689]">
+          <CheckCircle className="h-5 w-5" />
+          <span className="text-[14px] font-medium">Enlace generado exitosamente</span>
+        </div>
+      )}
 
-            {!verificationUrl ? (
-              <Button
-                className="w-full"
-                onClick={handleGenerateLink}
+      {/* Form */}
+      <div className="flex flex-col gap-6 max-w-[600px]">
+        {/* Nombre Completo */}
+        <div className="flex flex-col gap-1">
+          <label className="text-[14px] text-[#57636C]">Nombre Completo:</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={!!verificationUrl}
+            className="w-full h-[44px] px-0 text-[14px] text-[#212121] bg-transparent border-0 border-b border-[#E0E3E7] outline-none transition-colors focus:border-[#434447] disabled:opacity-60"
+          />
+        </div>
+
+        {/* Teléfono */}
+        <div className="flex flex-col gap-1">
+          <label className="text-[14px] text-[#57636C]">Teléfono:</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            disabled={!!verificationUrl}
+            className="w-full h-[44px] px-0 text-[14px] text-[#212121] bg-transparent border-0 border-b border-[#E0E3E7] outline-none transition-colors focus:border-[#434447] disabled:opacity-60"
+          />
+        </div>
+
+        {/* Email */}
+        <div className="flex flex-col gap-1">
+          <label className="text-[14px] text-[#57636C]">Email:</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={!!verificationUrl}
+            className="w-full h-[44px] px-0 text-[14px] text-[#212121] bg-transparent border-0 border-b border-[#E0E3E7] outline-none transition-colors focus:border-[#434447] disabled:opacity-60"
+          />
+        </div>
+
+        {/* Buttons */}
+        <div className="flex flex-wrap gap-3 mt-4">
+          {!verificationUrl ? (
+            <>
+              <button
+                onClick={handleGenerateAndSendWhatsApp}
                 disabled={loading}
+                className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? 'Generando...' : 'Generar Enlace de Verificación'}
-              </Button>
-            ) : (
-              <div className="flex flex-col gap-4 pt-2">
-                <div className="flex items-center gap-2 text-emerald-600 font-medium">
-                  <CheckCircle className="h-6 w-6" />
-                  <span>Enlace generado exitosamente</span>
-                </div>
-
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    value={verificationUrl}
-                    readOnly
-                    className="flex-1 bg-muted text-xs"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyLink}
-                    title="Copiar enlace"
-                  >
-                    {copied ? (
-                      <CheckCircle className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Button
-                    className="w-full bg-emerald-500 hover:bg-emerald-600"
-                    onClick={handleSendWhatsApp}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar por WhatsApp
-                  </Button>
-                  <Button
-                    className="w-full bg-blue-500 hover:bg-blue-600"
-                    onClick={handleSendEmail}
-                    disabled={sendingEmail}
-                  >
-                    {sendingEmail ? (
-                      <>
-                        <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Enviando...
-                      </>
-                    ) : emailSent ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Correo Enviado
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="h-4 w-4 mr-2" />
-                        Enviar por Correo
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={resetForm}
-                  >
-                    Crear Nuevo Enlace
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Instructions card */}
-        <Card className="h-fit">
-          <CardContent className="p-6">
-            <h3 className="text-base font-semibold text-foreground mb-4">
-              Instrucciones
-            </h3>
-            <ol className="list-decimal list-inside space-y-3 text-sm text-muted-foreground">
-              <li>
-                Ingrese los datos del cliente que necesita verificar su
-                identidad.
-              </li>
-              <li>
-                Haga clic en &quot;Generar Enlace de Verificación&quot; para
-                crear un enlace único.
-              </li>
-              <li>
-                Envíe el enlace al cliente por WhatsApp, correo electrónico, o
-                copie el enlace para compartirlo por otro medio.
-              </li>
-              <li>
-                El cliente completará el proceso de verificación KYC desde el
-                enlace.
-              </li>
-              <li>
-                El estado de la verificación se actualizará automáticamente en
-                el sistema.
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
+                {loading ? 'Generando...' : 'Enviar por Whatsapp'}
+              </button>
+              <button
+                onClick={handleSendEmail}
+                disabled={sendingEmail}
+                className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {sendingEmail ? 'Enviando...' : emailSent ? 'Correo Enviado' : 'Enviar por Correo'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  const message = `Hola ${name}, le enviamos el siguiente enlace para completar su verificación de identidad (KYC):\n\n${verificationUrl}\n\nPor favor complete el proceso lo antes posible.`;
+                  const cleanPhone = phone.replace(/[^0-9]/g, '');
+                  launchWhatsApp(cleanPhone, message);
+                }}
+                className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors"
+              >
+                Enviar por Whatsapp
+              </button>
+              <button
+                onClick={handleSendEmail}
+                disabled={sendingEmail}
+                className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {sendingEmail ? 'Enviando...' : emailSent ? 'Correo Enviado' : 'Enviar por Correo'}
+              </button>
+              <button
+                onClick={resetForm}
+                className="h-[44px] px-6 bg-[#E0E3E7] hover:bg-[#D0D3D7] text-[#434447] text-[14px] font-medium rounded-lg transition-colors"
+              >
+                Nuevo Enlace
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

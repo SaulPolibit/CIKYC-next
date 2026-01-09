@@ -155,16 +155,18 @@
 
 /* Custom utility classes to match FlutterFlow styling */
 @layer utilities {
+  /* Underline input style like FlutterFlow */
   .input-flutter {
-    @apply bg-muted border-2 border-muted rounded-xl px-5 py-3 text-sm;
+    @apply bg-transparent border-0 border-b border-border px-0 py-3 text-sm rounded-none;
   }
   .input-flutter:focus {
-    @apply border-muted-foreground;
+    @apply border-b-2 border-foreground outline-none;
   }
+  /* Primary button style */
   .btn-flutter {
-    @apply bg-muted-foreground text-white rounded-xl px-6 py-3 font-semibold shadow-md;
+    @apply bg-[#434447] text-white rounded-lg px-8 py-3 font-medium;
   }
   .btn-flutter:hover {
-    @apply bg-foreground;
+    @apply bg-[#333538];
   }
 }

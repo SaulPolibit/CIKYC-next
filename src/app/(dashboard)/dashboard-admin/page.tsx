@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, X, Info, User, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, X, Info, User, Download, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllVerifiedUsers, filterVerifiedUsers } from '@/services/database';
 import { getToken, downloadPDF } from '@/services/api';
@@ -25,6 +26,7 @@ const getStatusDisplay = (status: string | null) => {
 };
 
 export default function DashboardAdminPage() {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [allUsers, setAllUsers] = useState<VerifiedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,6 @@ export default function DashboardAdminPage() {
 
     setLoading(true);
     try {
-      // Admin gets all users
       const users = await getAllVerifiedUsers(true, currentUser.email);
       setAllUsers(users);
     } catch (error) {
@@ -52,7 +53,6 @@ export default function DashboardAdminPage() {
     }
   };
 
-  // Map selected Spanish statuses to include English equivalents for filtering
   const mappedStatuses = useMemo(() => {
     return selectedStatuses.flatMap(
       (status) => statusReverseMap[status as KYCStatusSpanish] || [status]
@@ -83,44 +83,50 @@ export default function DashboardAdminPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
-      {/* Title */}
-      <div className="px-4 pt-4 pb-1">
-        <h1 className="text-[32px] font-semibold text-[#212121]">
-          Dashboard Admin
+    <div className="flex flex-col min-h-screen bg-white p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-[28px] font-semibold text-[#212121]">
+          Dashboard
         </h1>
+        <button
+          onClick={() => router.push('/add-user')}
+          className="h-[40px] px-5 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors"
+        >
+          Administrar usuarios
+        </button>
       </div>
 
       {/* Search bar */}
-      <div className="px-4 py-3 flex justify-end items-center gap-2.5">
-        <div className="relative w-[300px]">
+      <div className="flex justify-end items-center gap-2 mb-4">
+        <div className="relative w-[280px]">
           <input
             type="text"
             placeholder="Buscar ..."
             value={searchString}
             onChange={(e) => setSearchString(e.target.value)}
-            className="w-full h-[44px] px-5 pr-12 text-[14px] text-[#212121] bg-white border-2 border-[#E0E3E7] rounded-xl outline-none transition-colors focus:border-[#212121]"
+            className="w-full h-[40px] px-4 pr-10 text-[14px] text-[#212121] bg-white border border-[#E0E3E7] rounded-lg outline-none transition-colors focus:border-[#434447]"
           />
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#434447] pointer-events-none" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#57636C]" />
         </div>
         {searchString && (
           <button
             onClick={clearSearch}
-            className="p-1 text-[#57636C]/50 hover:text-[#57636C]"
+            className="p-1 text-[#57636C] hover:text-[#212121]"
           >
-            <X className="h-9 w-9" />
+            <X className="h-6 w-6" />
           </button>
         )}
       </div>
 
       {/* Status filters */}
-      <div className="py-2 flex items-start">
+      <div className="flex items-start gap-2 mb-4">
         <button
           onClick={() => setShowInfoDialog(true)}
           title="Información de Estatus"
-          className="p-2 text-[#57636C]/50 hover:text-[#57636C] rounded-lg"
+          className="p-1 text-[#57636C] hover:text-[#212121]"
         >
-          <Info className="h-6 w-6" />
+          <Info className="h-5 w-5" />
         </button>
         <div className="flex-1">
           <ChoiceChips
@@ -133,64 +139,70 @@ export default function DashboardAdminPage() {
       </div>
 
       {/* User list */}
-      <div className="px-4 pt-2.5 pb-4">
+      <div className="flex-1">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <div className="h-8 w-8 border-3 border-[#E0E3E7] border-t-[#39D2C0] rounded-full animate-spin" />
-            <span className="text-[#434447]">Cargando...</span>
+            <div className="h-8 w-8 border-3 border-[#E0E3E7] border-t-[#434447] rounded-full animate-spin" />
+            <span className="text-[#57636C]">Cargando...</span>
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-[#434447] text-[14px]">
-            <span>No hay usuarios verificados</span>
+          <div className="flex items-center justify-center py-12 text-[#57636C] text-[14px]">
+            No hay usuarios verificados
           </div>
         ) : (
           <div className="flex flex-col">
             {filteredUsers.map((user) => (
-              <div key={user.id} className="bg-white">
-                <div className="flex items-center gap-4 pb-1">
+              <div key={user.id} className="py-2">
+                {/* Header row with client and agent */}
+                <div className="flex items-center gap-6 mb-1">
                   <div className="flex items-center gap-2">
                     <User className="h-5 w-5 text-[#212121]" />
-                    <span className="text-[12px] font-bold text-[#434447]">Cliente:</span>
-                    <span className="text-[12px] text-[#212121]">
-                      {user.name}
-                    </span>
+                    <span className="text-[12px] font-semibold text-[#212121]">Cliente:</span>
+                    <span className="text-[12px] text-[#212121]">{user.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-[#39D2C0]" />
-                    <span className="text-[12px] font-bold text-[#434447]">Asesor:</span>
-                    <span className="text-[12px] text-[#212121]">
-                      {user.agent_email}
-                    </span>
+                    <User className="h-5 w-5 text-[#434447]" />
+                    <span className="text-[12px] font-semibold text-[#57636C]">Asesor:</span>
+                    <span className="text-[12px] text-[#212121]">{user.agent_email}</span>
                   </div>
-                  <div className="flex-1" />
-                  {user.kyc_id && user.kyc_status === 'Approved' && (
+                </div>
+
+                {/* Details row */}
+                <div className="flex items-center pl-7">
+                  <span className="flex-1 text-[14px] text-[#212121]">
+                    {user.user_email}
+                  </span>
+                  <span className="flex-1 text-[14px] text-[#212121]">
+                    {user.phone}
+                  </span>
+                  <span className="flex-1 text-[14px] text-[#212121]">
+                    {formatDate(user.date_sent)}
+                  </span>
+                  <span className="flex-1 text-[14px] text-[#212121]">
+                    {getStatusDisplay(user.kyc_status)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {user.kyc_id && user.kyc_status === 'Approved' && (
+                      <button
+                        onClick={() => handleDownloadPDF(user)}
+                        disabled={downloadingPDF === user.id}
+                        className="flex items-center gap-1 text-[12px] text-[#57636C] hover:text-[#212121] disabled:opacity-50"
+                      >
+                        <span>PDF</span>
+                        <Download className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleDownloadPDF(user)}
-                      disabled={downloadingPDF === user.id}
-                      title="Descargar PDF"
-                      className="p-1.5 text-[#434447] hover:text-[#212121] hover:bg-[#E0E3E7] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1 text-[#57636C] hover:text-[#FF5963]"
+                      title="Eliminar"
                     >
-                      <Download className="h-[18px] w-[18px]" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
-                  )}
-                </div>
-                <div className="pl-4 mt-1">
-                  <div className="flex py-1">
-                    <span className="flex-1 text-[14px] font-normal text-[#212121] text-center">
-                      {user.user_email}
-                    </span>
-                    <span className="flex-1 text-[14px] font-normal text-[#212121] text-center">
-                      {user.phone}
-                    </span>
-                    <span className="flex-1 text-[14px] font-normal text-[#212121] text-center">
-                      {formatDate(user.date_sent)}
-                    </span>
-                    <span className="flex-1 text-[14px] font-normal text-[#212121] text-center">
-                      {getStatusDisplay(user.kyc_status)}
-                    </span>
                   </div>
-                  <div className="h-px bg-[#E0E3E7] mt-3 mb-3" />
                 </div>
+
+                {/* Divider */}
+                <div className="h-px bg-[#E0E3E7] mt-3" />
               </div>
             ))}
           </div>
@@ -210,44 +222,24 @@ export default function DashboardAdminPage() {
             <h3 className="text-[18px] font-semibold text-[#212121] mb-4">
               Información de Estatus
             </h3>
-            <div className="text-[14px] text-[#434447] leading-7 mb-5">
-              <p>
-                <strong>Enviado:</strong> Link de Verificación enviado al
-                cliente.
-              </p>
-              <p>
-                <strong>En Progreso:</strong> Cliente ha iniciado el KYC.
-              </p>
-              <p>
-                <strong>Aprobado:</strong> El Cliente terminó el KYC y fue
-                aprobado.
-              </p>
-              <p>
-                <strong>Declinado:</strong> El Cliente terminó el KYC pero fue
-                declinado.
-              </p>
-              <p>
-                <strong>En Revisión:</strong> El KYC del Cliente se encuentra en
-                revisión.
-              </p>
-              <p>
-                <strong>Expirado:</strong> El link enviado al Cliente ya expiró.
-              </p>
-              <p>
-                <strong>Abandonado:</strong> El Cliente inició el KYC, no
-                terminó el proceso y el link expiró.
-              </p>
-              <p>
-                <strong>KYC Expirado:</strong> El Cliente pasó el KYC pero algún
-                documento de identificación ya expiró.
-              </p>
+            <div className="text-[14px] text-[#57636C] leading-7 mb-5">
+              <p><strong className="text-[#212121]">Enviado:</strong> Link de Verificación enviado al cliente.</p>
+              <p><strong className="text-[#212121]">En Progreso:</strong> Cliente ha iniciado el KYC.</p>
+              <p><strong className="text-[#212121]">Aprobado:</strong> El Cliente terminó el KYC y fue aprobado.</p>
+              <p><strong className="text-[#212121]">Declinado:</strong> El Cliente terminó el KYC pero fue declinado.</p>
+              <p><strong className="text-[#212121]">En Revisión:</strong> El KYC del Cliente se encuentra en revisión.</p>
+              <p><strong className="text-[#212121]">Expirado:</strong> El link enviado al Cliente ya expiró.</p>
+              <p><strong className="text-[#212121]">Abandonado:</strong> El Cliente inició el KYC, no terminó el proceso y el link expiró.</p>
+              <p><strong className="text-[#212121]">KYC Expirado:</strong> El Cliente pasó el KYC pero algún documento de identificación ya expiró.</p>
             </div>
-            <button
-              onClick={() => setShowInfoDialog(false)}
-              className="float-right px-6 py-2.5 text-[14px] font-medium text-[#39D2C0] hover:text-[#249689] bg-transparent border-none cursor-pointer"
-            >
-              Ok
-            </button>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowInfoDialog(false)}
+                className="px-6 py-2 text-[14px] font-medium text-[#434447] hover:text-[#212121]"
+              >
+                Ok
+              </button>
+            </div>
           </div>
         </div>
       )}

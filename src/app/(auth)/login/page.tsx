@@ -101,8 +101,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-8 py-8">
-      <div className="w-full max-w-[370px] flex flex-col items-center">
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Main content */}
+      <div className="flex-1 flex items-center justify-center px-8 py-8">
+        <div className="w-full max-w-[370px] flex flex-col items-center">
         {/* Logo */}
         <div className="mb-6 mt-[50px]">
           <Image
@@ -134,36 +136,32 @@ export default function LoginPage() {
             )}
 
             {/* Email input */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label htmlFor="email" className="text-[14px] font-normal text-[#434447]">
-                Email
-              </label>
+            <div className="text-left">
               <input
                 id="email"
                 type="email"
+                placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-[44px] px-5 text-[14px] text-[#212121] bg-[#F1F4F8] border-2 border-[#F1F4F8] rounded-xl outline-none transition-colors focus:border-[#434447]"
+                className="w-full h-[50px] px-5 text-[14px] text-[#212121] placeholder:text-[#57636C] bg-[#F1F4F8] border-0 rounded-xl outline-none transition-colors focus:ring-2 focus:ring-[#434447]"
               />
             </div>
 
             {/* Password input */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label htmlFor="password" className="text-[14px] font-normal text-[#434447]">
-                Contraseña
-              </label>
+            <div className="text-left">
               <div className="relative">
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
+                  placeholder="Contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-[44px] px-5 pr-12 text-[14px] text-[#212121] bg-[#F1F4F8] border-2 border-[#F1F4F8] rounded-xl outline-none transition-colors focus:border-[#434447]"
+                  className="w-full h-[50px] px-5 pr-12 text-[14px] text-[#212121] placeholder:text-[#57636C] bg-[#F1F4F8] border-0 rounded-xl outline-none transition-colors focus:ring-2 focus:ring-[#434447]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#434447]"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#57636C]"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -191,6 +189,9 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+      </div>
+      {/* Orange accent line at bottom */}
+      <div className="h-1 bg-[#EE8B60] w-full" />
     </div>
   );
 }
