@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Link2, Send, Copy, CheckCircle } from 'lucide-react';
+import { Link2, Send, Copy, CheckCircle, Mail, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getToken, createSession, launchWhatsApp } from '@/services/api';
+import { getToken, createSession, launchWhatsApp, sendVerificationEmail } from '@/services/api';
 import { addVerifiedUser } from '@/services/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ export default function LinksVerificacionPage() {
   const [verificationUrl, setVerificationUrl] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const validateForm = () => {
     if (!name.trim()) {
@@ -100,12 +102,30 @@ export default function LinksVerificacionPage() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!verificationUrl || !email) return;
+
+    setSendingEmail(true);
+    setError('');
+    try {
+      await sendVerificationEmail(email, name, verificationUrl);
+      setEmailSent(true);
+      setTimeout(() => setEmailSent(false), 3000);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      setError('Error al enviar el correo. Verifique la configuración de email.');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const resetForm = () => {
     setName('');
     setPhone('');
     setEmail('');
     setVerificationUrl('');
     setError('');
+    setEmailSent(false);
   };
 
   return (
@@ -216,6 +236,28 @@ export default function LinksVerificacionPage() {
                     Enviar por WhatsApp
                   </Button>
                   <Button
+                    className="w-full bg-blue-500 hover:bg-blue-600"
+                    onClick={handleSendEmail}
+                    disabled={sendingEmail}
+                  >
+                    {sendingEmail ? (
+                      <>
+                        <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Enviando...
+                      </>
+                    ) : emailSent ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Correo Enviado
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Enviar por Correo
+                      </>
+                    )}
+                  </Button>
+                  <Button
                     variant="secondary"
                     className="w-full"
                     onClick={resetForm}
@@ -244,8 +286,8 @@ export default function LinksVerificacionPage() {
                 crear un enlace único.
               </li>
               <li>
-                Envíe el enlace al cliente por WhatsApp o copie el enlace para
-                compartirlo por otro medio.
+                Envíe el enlace al cliente por WhatsApp, correo electrónico, o
+                copie el enlace para compartirlo por otro medio.
               </li>
               <li>
                 El cliente completará el proceso de verificación KYC desde el

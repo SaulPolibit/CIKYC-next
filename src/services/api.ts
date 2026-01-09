@@ -55,3 +55,23 @@ export function launchWhatsApp(phone: string, message: string): void {
   const encodedMessage = encodeURIComponent(message);
   window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
 }
+
+// Send verification link by email
+export async function sendVerificationEmail(
+  to: string,
+  name: string,
+  verificationUrl: string
+): Promise<void> {
+  const response = await fetch('/api/email/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ to, name, verificationUrl }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to send email');
+  }
+}
