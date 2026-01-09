@@ -152,7 +152,7 @@ export default function DashboardAdminPage() {
                   <span className="text-[12px] font-bold text-[#212121] flex-1">
                     {user.name}
                   </span>
-                  {user.kyc_id && (
+                  {user.kyc_id && user.kyc_status === 'Approved' && (
                     <button
                       onClick={() => handleDownloadPDF(user)}
                       disabled={downloadingPDF === user.id}
