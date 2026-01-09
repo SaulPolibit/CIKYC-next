@@ -40,7 +40,7 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="w-[16vw] min-w-[200px] max-w-[280px] h-screen bg-[#F1F4F8] border-r border-[#E0E3E7] flex flex-col fixed left-0 top-0 z-50 py-6 hidden lg:flex">
+    <aside className="w-[16vw] min-w-[200px] max-w-[280px] h-screen bg-[#F1F4F8] border-r border-[#E0E3E7] flex flex-col fixed left-0 top-0 z-50 py-6">
       {/* Logo */}
       <div className="px-4 pb-3 flex justify-center">
         <Image

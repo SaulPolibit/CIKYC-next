@@ -17,6 +17,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check initial session
     const checkSession = async () => {
       try {
+        // First check localStorage for stored user
+        const storedUser = localStorage.getItem('cikyc_user');
+        if (storedUser) {
+          try {
+            const user: User = JSON.parse(storedUser);
+            setCurrentUser({ email: user.email });
+            setUserData(user);
+            console.log('User restored from localStorage:', user.email);
+          } catch (e) {
+            console.error('Error parsing stored user:', e);
+            localStorage.removeItem('cikyc_user');
+          }
+        }
+
+        // Also check Supabase session
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Initial session check:', session?.user?.email);
 
@@ -25,9 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const user = await getUserByEmail(session.user.email);
             setUserData(user);
+            // Update localStorage with fresh data
+            if (user) {
+              localStorage.setItem('cikyc_user', JSON.stringify(user));
+            }
           } catch (e) {
             console.error('Error fetching user in checkSession:', e);
-            setUserData(null);
+            // Keep localStorage data if fetch fails
           }
         }
       } catch (e) {
@@ -100,6 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserData(user);
       setLoading(false);
 
+      // Store user in localStorage
+      if (user) {
+        localStorage.setItem('cikyc_user', JSON.stringify(user));
+      }
+
       return user;
     } catch (error) {
       console.error('Login error:', error);
@@ -114,6 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     setCurrentUser(null);
     setUserData(null);
+    // Clear user from localStorage
+    localStorage.removeItem('cikyc_user');
   };
 
   const resetPassword = async (email: string) => {

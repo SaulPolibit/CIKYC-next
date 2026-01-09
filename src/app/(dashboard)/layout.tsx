@@ -38,7 +38,7 @@ export default function DashboardLayout({
     <div className="flex min-h-screen bg-white">
       <AppSidebar />
       {/* Main content - margin-left matches sidebar width */}
-      <main className="flex-1 ml-0 lg:ml-[max(16vw,200px)] min-h-screen overflow-y-auto max-w-[calc(100%-max(16vw,200px))]">
+      <main className="flex-1 ml-[max(16vw,200px)] min-h-screen overflow-y-auto">
         {children}
       </main>
     </div>

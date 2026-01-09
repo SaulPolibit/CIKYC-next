@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import type { User } from '@/types';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,25 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingStorage, setCheckingStorage] = useState(true);
+
+  // Check localStorage for existing user on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('cikyc_user');
+    if (storedUser) {
+      try {
+        const user: User = JSON.parse(storedUser);
+        const userIsAdmin = user.role === '2' || user.role === '3';
+        router.push(userIsAdmin ? '/dashboard-admin' : '/dashboard');
+      } catch (e) {
+        console.error('Error parsing stored user:', e);
+        localStorage.removeItem('cikyc_user');
+        setCheckingStorage(false);
+      }
+    } else {
+      setCheckingStorage(false);
+    }
+  }, [router]);
 
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,6 +66,9 @@ export default function LoginPage() {
         return;
       }
 
+      // Store user in localStorage
+      localStorage.setItem('cikyc_user', JSON.stringify(user));
+
       const userIsAdmin = user.role === '2' || user.role === '3';
       router.push(userIsAdmin ? '/dashboard-admin' : '/dashboard');
     } catch (err: unknown) {
@@ -64,6 +87,18 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking localStorage
+  if (checkingStorage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 border-3 border-[#E0E3E7] border-t-[#39D2C0] rounded-full animate-spin" />
+          <span className="text-[#434447]">Cargando...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-8 py-8">
