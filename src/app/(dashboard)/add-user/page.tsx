@@ -329,14 +329,99 @@ export default function AddUserPage() {
         </div>
       </div>
 
-      {/* Users count */}
-      {!loading && (
-        <div className="mt-8 flex justify-center gap-4 text-[14px] text-[#57636C]">
+      {/* Divider */}
+      <div className="h-px bg-[#E0E3E7] my-10 max-w-[800px]" />
+
+      {/* Users List */}
+      <h2 className="text-[24px] font-semibold text-[#212121] mb-6 max-w-[800px]">
+        Usuarios del Sistema
+      </h2>
+
+      <div className="max-w-[800px]">
+        {/* Users count */}
+        <div className="mb-4 flex gap-4 text-[14px] text-[#57636C]">
           <span>{users.filter(u => u.is_active).length} usuarios activos</span>
           <span>•</span>
           <span>{users.filter(u => !u.is_active).length} deshabilitados</span>
         </div>
-      )}
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <div className="h-8 w-8 border-3 border-[#E0E3E7] border-t-[#434447] rounded-full animate-spin" />
+            <span className="text-[#57636C]">Cargando usuarios...</span>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-[#57636C] text-[14px]">
+            No hay usuarios registrados
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {users.map((user) => (
+              <div
+                key={user.id}
+                className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                  user.is_active
+                    ? 'bg-white border-[#E0E3E7] hover:bg-[#F1F4F8]'
+                    : 'bg-[#FF5963]/5 border-[#FF5963]/20'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`h-10 w-10 rounded-full text-white flex items-center justify-center text-base font-semibold ${
+                      user.is_active
+                        ? 'bg-[#434447]'
+                        : 'bg-[#57636C]/50'
+                    }`}
+                  >
+                    {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[14px] font-medium ${
+                          user.is_active ? 'text-[#212121]' : 'text-[#57636C] line-through'
+                        }`}
+                      >
+                        {user.name || 'Sin nombre'}
+                      </span>
+                      {!user.is_active && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-[#FF5963] text-white rounded">
+                          Deshabilitado
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[12px] text-[#57636C]">
+                      {user.email}
+                    </span>
+                    <span className="text-[12px] text-[#434447] font-medium">
+                      {ROLE_OPTIONS.find(r => r.value === user.role)?.label || user.role}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedUserId(user.id);
+                    // Scroll to the toggle section
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${
+                    user.is_active
+                      ? 'text-[#FF5963] hover:bg-[#FF5963]/10'
+                      : 'text-[#249689] hover:bg-[#249689]/10'
+                  }`}
+                  title={user.is_active ? 'Deshabilitar usuario' : 'Habilitar usuario'}
+                >
+                  {user.is_active ? (
+                    <UserX className="h-5 w-5" />
+                  ) : (
+                    <UserCheck className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
