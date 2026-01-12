@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
             <div style="text-align: center; margin: 30px 0;">
               <a href="${verificationUrl}"
-                 style="background-color: #39D2C0; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                 style="background-color: #434447; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
                 Completar Verificación
               </a>
             </div>

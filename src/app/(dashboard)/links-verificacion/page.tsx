@@ -38,7 +38,7 @@ export default function LinksVerificacionPage() {
     return true;
   };
 
-  const handleGenerateAndSendWhatsApp = async () => {
+  const handleCreateLink = async () => {
     setError('');
     if (!validateForm()) return;
 
@@ -63,11 +63,6 @@ export default function LinksVerificacionPage() {
         kyc_status: 'Not Started',
         downloaded: false,
       });
-
-      // Send via WhatsApp
-      const message = `Hola ${name}, le enviamos el siguiente enlace para completar su verificación de identidad (KYC):\n\n${url}\n\nPor favor complete el proceso lo antes posible.`;
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      launchWhatsApp(cleanPhone, message);
     } catch (error) {
       console.error('Error generating link:', error);
       setError('Error al generar el enlace. Intente nuevamente.');
@@ -76,38 +71,20 @@ export default function LinksVerificacionPage() {
     }
   };
 
+  const handleSendWhatsApp = () => {
+    if (!verificationUrl) return;
+    const message = `Hola ${name}, le enviamos el siguiente enlace para completar su verificación de identidad (KYC):\n\n${verificationUrl}\n\nPor favor complete el proceso lo antes posible.`;
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    launchWhatsApp(cleanPhone, message);
+  };
+
   const handleSendEmail = async () => {
+    if (!verificationUrl) return;
     setError('');
-    if (!validateForm()) return;
 
     setSendingEmail(true);
     try {
-      let url = verificationUrl;
-
-      // Generate link if not already generated
-      if (!url) {
-        const tokenResponse = await getToken();
-        const token = tokenResponse.token;
-        const sessionResponse = await createSession(token);
-        url = sessionResponse.url;
-        const id = sessionResponse.sessionId;
-
-        setVerificationUrl(url);
-
-        await addVerifiedUser({
-          name,
-          phone,
-          user_email: email,
-          agent_email: currentUser?.email || '',
-          agent_name: userData?.name || currentUser?.email || '',
-          kyc_url: url,
-          kyc_id: id,
-          kyc_status: 'Not Started',
-          downloaded: false,
-        });
-      }
-
-      await sendVerificationEmail(email, name, url);
+      await sendVerificationEmail(email, name, verificationUrl);
       setEmailSent(true);
       setTimeout(() => setEmailSent(false), 3000);
     } catch (error) {
@@ -141,7 +118,7 @@ export default function LinksVerificacionPage() {
 
       {/* Description */}
       <p className="text-[14px] text-[#57636C] mb-8 max-w-[800px]">
-        Para generar el link de verificación y enviarlo por correo es necesario ingresar los datos del cliente y posteriormente presionar el botón de enviar.
+        Para generar el link de verificación y enviarlo por correo es necesario ingresar los datos del cliente y posteriormente presionar el botón de crear link.
       </p>
 
       {error && (
@@ -198,30 +175,17 @@ export default function LinksVerificacionPage() {
         {/* Buttons */}
         <div className="flex flex-wrap gap-3 mt-4">
           {!verificationUrl ? (
-            <>
-              <button
-                onClick={handleGenerateAndSendWhatsApp}
-                disabled={loading}
-                className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Generando...' : 'Enviar por Whatsapp'}
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sendingEmail}
-                className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {sendingEmail ? 'Enviando...' : emailSent ? 'Correo Enviado' : 'Enviar por Correo'}
-              </button>
-            </>
+            <button
+              onClick={handleCreateLink}
+              disabled={loading}
+              className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Generando...' : 'Crear Link'}
+            </button>
           ) : (
             <>
               <button
-                onClick={() => {
-                  const message = `Hola ${name}, le enviamos el siguiente enlace para completar su verificación de identidad (KYC):\n\n${verificationUrl}\n\nPor favor complete el proceso lo antes posible.`;
-                  const cleanPhone = phone.replace(/[^0-9]/g, '');
-                  launchWhatsApp(cleanPhone, message);
-                }}
+                onClick={handleSendWhatsApp}
                 className="h-[44px] px-6 bg-[#434447] hover:bg-[#333538] text-white text-[14px] font-medium rounded-lg transition-colors"
               >
                 Enviar por Whatsapp
