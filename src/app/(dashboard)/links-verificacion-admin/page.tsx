@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Copy, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getToken, createSession, launchWhatsApp, sendVerificationEmail } from '@/services/api';
 import { addVerifiedUser } from '@/services/database';
@@ -16,6 +16,7 @@ export default function LinksVerificacionAdminPage() {
   const [error, setError] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const validateForm = () => {
     if (!name.trim()) {
@@ -95,6 +96,17 @@ export default function LinksVerificacionAdminPage() {
     }
   };
 
+  const handleCopyLink = async () => {
+    if (!verificationUrl) return;
+    try {
+      await navigator.clipboard.writeText(verificationUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+    }
+  };
+
   const resetForm = () => {
     setName('');
     setPhone('');
@@ -102,6 +114,7 @@ export default function LinksVerificacionAdminPage() {
     setVerificationUrl('');
     setError('');
     setEmailSent(false);
+    setCopied(false);
   };
 
   return (
@@ -128,9 +141,35 @@ export default function LinksVerificacionAdminPage() {
       )}
 
       {verificationUrl && (
-        <div className="mb-6 flex items-center gap-2 text-[#249689]">
-          <CheckCircle className="h-5 w-5" />
-          <span className="text-[14px] font-medium">Enlace generado exitosamente</span>
+        <div className="mb-6 max-w-[600px]">
+          <div className="flex items-center gap-2 text-[#249689] mb-3">
+            <CheckCircle className="h-5 w-5" />
+            <span className="text-[14px] font-medium">Enlace generado exitosamente</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={verificationUrl}
+              readOnly
+              className="flex-1 h-[44px] px-3 text-[12px] text-[#57636C] bg-[#F1F4F8] border border-[#E0E3E7] rounded-lg outline-none"
+            />
+            <button
+              onClick={handleCopyLink}
+              className="h-[44px] px-4 bg-[#E0E3E7] hover:bg-[#D0D3D7] text-[#434447] text-[14px] font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copiado
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copiar
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
