@@ -1,5 +1,5 @@
 import { supabase, supabaseDb } from '@/lib/supabase';
-import type { User, VerifiedUser, CreateVerifiedUserData, KYCStatusSpanish, statusReverseMap } from '@/types';
+import type { User, VerifiedUser, CreateVerifiedUserData, CreatedLink, CreateLinkData } from '@/types';
 
 // Users collection operations
 export async function getUsers(): Promise<User[]> {
@@ -111,6 +111,18 @@ export async function addVerifiedUser(userData: CreateVerifiedUserData): Promise
       ...userData,
       date_sent: new Date().toISOString(),
     }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Created links collection operations
+export async function addCreatedLink(linkData: CreateLinkData): Promise<CreatedLink> {
+  const { data, error } = await supabase
+    .from('created_links')
+    .insert([linkData])
     .select()
     .single();
 

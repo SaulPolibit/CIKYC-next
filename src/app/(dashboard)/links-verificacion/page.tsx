@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { CheckCircle, Copy, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getToken, createSession, launchWhatsApp, sendVerificationEmail } from '@/services/api';
-import { addVerifiedUser } from '@/services/database';
+import { addVerifiedUser, addCreatedLink } from '@/services/database';
 
 export default function LinksVerificacionPage() {
   const { currentUser, userData } = useAuth();
@@ -53,7 +53,7 @@ export default function LinksVerificacionPage() {
 
       setVerificationUrl(url);
 
-      await addVerifiedUser({
+      const linkData = {
         name,
         phone,
         user_email: email,
@@ -61,9 +61,17 @@ export default function LinksVerificacionPage() {
         agent_name: userData?.name || currentUser?.email || '',
         kyc_url: url,
         kyc_id: id,
-        kyc_status: 'Not Started',
-        downloaded: false,
-      });
+      };
+
+      // Save to both tables
+      await Promise.all([
+        addVerifiedUser({
+          ...linkData,
+          kyc_status: 'Not Started',
+          downloaded: false,
+        }),
+        addCreatedLink(linkData),
+      ]);
     } catch (error) {
       console.error('Error generating link:', error);
       setError('Error al generar el enlace. Intente nuevamente.');

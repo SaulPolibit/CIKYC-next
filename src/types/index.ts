@@ -23,6 +23,28 @@ export interface VerifiedUser {
   created_at?: string;
 }
 
+export interface CreatedLink {
+  id: string;
+  name: string;
+  phone: string;
+  user_email: string;
+  agent_email: string;
+  agent_name: string;
+  kyc_url: string;
+  kyc_id: string;
+  created_at?: string;
+}
+
+export interface CreateLinkData {
+  name: string;
+  phone: string;
+  user_email: string;
+  agent_email: string;
+  agent_name: string;
+  kyc_url: string;
+  kyc_id: string;
+}
+
 export type KYCStatus =
   | 'Not Started'
   | 'In Progress'
