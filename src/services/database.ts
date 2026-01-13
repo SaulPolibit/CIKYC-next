@@ -130,6 +130,16 @@ export async function addCreatedLink(linkData: CreateLinkData): Promise<CreatedL
   return data;
 }
 
+export async function getAllCreatedLinks(): Promise<CreatedLink[]> {
+  const { data, error } = await supabase
+    .from('created_links')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function updateVerifiedUserStatus(
   id: string,
   status: string

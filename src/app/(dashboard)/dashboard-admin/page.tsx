@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Info, User, Download, Trash2 } from 'lucide-react';
+import { Search, X, Info, User, Download, Trash2, BarChart3, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllVerifiedUsers, filterVerifiedUsers, deleteVerifiedUser } from '@/services/database';
+import { getAllVerifiedUsers, filterVerifiedUsers, deleteVerifiedUser, getAllCreatedLinks } from '@/services/database';
 import { getToken, downloadPDF } from '@/services/api';
 import { ChoiceChips } from '@/components/choice-chips';
-import type { VerifiedUser, KYCStatusSpanish } from '@/types';
+import type { VerifiedUser, KYCStatusSpanish, CreatedLink } from '@/types';
 import { KYC_STATUS_OPTIONS, statusMap, statusReverseMap } from '@/types';
 
 const formatDate = (dateString: string | null) => {
@@ -29,6 +29,7 @@ export default function DashboardAdminPage() {
   const router = useRouter();
   const { currentUser, isAdmin } = useAuth();
   const [allUsers, setAllUsers] = useState<VerifiedUser[]>([]);
+  const [createdLinks, setCreatedLinks] = useState<CreatedLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchString, setSearchString] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -37,22 +38,55 @@ export default function DashboardAdminPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUsers();
+    fetchData();
   }, [currentUser]);
 
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     if (!currentUser?.email) return;
 
     setLoading(true);
     try {
-      const users = await getAllVerifiedUsers(true, currentUser.email);
+      const [users, links] = await Promise.all([
+        getAllVerifiedUsers(true, currentUser.email),
+        getAllCreatedLinks(),
+      ]);
       setAllUsers(users);
+      setCreatedLinks(links);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Statistics: Group created links by month
+  const linksByMonth = useMemo(() => {
+    const grouped: Record<string, number> = {};
+    createdLinks.forEach((link) => {
+      if (link.created_at) {
+        const date = new Date(link.created_at);
+        const monthKey = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+        grouped[monthKey] = (grouped[monthKey] || 0) + 1;
+      }
+    });
+    // Sort by date (most recent first)
+    return Object.entries(grouped).sort((a, b) => {
+      const dateA = new Date(a[0]);
+      const dateB = new Date(b[0]);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [createdLinks]);
+
+  // Statistics: Group created links by agent
+  const linksByAgent = useMemo(() => {
+    const grouped: Record<string, number> = {};
+    createdLinks.forEach((link) => {
+      const agent = link.agent_email || 'Sin asignar';
+      grouped[agent] = (grouped[agent] || 0) + 1;
+    });
+    // Sort by count (highest first)
+    return Object.entries(grouped).sort((a, b) => b[1] - a[1]);
+  }, [createdLinks]);
 
   const mappedStatuses = useMemo(() => {
     return selectedStatuses.flatMap(
@@ -243,6 +277,88 @@ export default function DashboardAdminPage() {
           </div>
         )}
       </div>
+
+      {/* Row counter */}
+      {!loading && filteredUsers.length > 0 && (
+        <div className="mt-4 py-3 px-4 bg-[#F1F4F8] rounded-lg">
+          <span className="text-[14px] text-[#57636C]">
+            Mostrando <strong className="text-[#212121]">{filteredUsers.length}</strong> de{' '}
+            <strong className="text-[#212121]">{allUsers.length}</strong> registros
+          </span>
+        </div>
+      )}
+
+      {/* Statistics Section */}
+      {isAdmin && !loading && (
+        <div className="mt-8">
+          <h2 className="text-[20px] font-semibold text-[#212121] mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Estadísticas de Links Creados
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Links by Month */}
+            <div className="bg-[#F1F4F8] rounded-lg p-4">
+              <h3 className="text-[16px] font-semibold text-[#212121] mb-3 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Links por Mes
+              </h3>
+              {linksByMonth.length === 0 ? (
+                <p className="text-[14px] text-[#57636C]">No hay datos disponibles</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {linksByMonth.map(([month, count]) => (
+                    <div key={month} className="flex items-center justify-between">
+                      <span className="text-[14px] text-[#212121] capitalize">{month}</span>
+                      <span className="text-[14px] font-semibold text-[#434447] bg-white px-3 py-1 rounded-full">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="h-px bg-[#E0E3E7] my-2" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] font-semibold text-[#212121]">Total</span>
+                    <span className="text-[14px] font-semibold text-[#434447] bg-[#434447] text-white px-3 py-1 rounded-full">
+                      {createdLinks.length}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Links by Agent */}
+            <div className="bg-[#F1F4F8] rounded-lg p-4">
+              <h3 className="text-[16px] font-semibold text-[#212121] mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Links por Asesor
+              </h3>
+              {linksByAgent.length === 0 ? (
+                <p className="text-[14px] text-[#57636C]">No hay datos disponibles</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {linksByAgent.map(([agent, count]) => (
+                    <div key={agent} className="flex items-center justify-between">
+                      <span className="text-[14px] text-[#212121] truncate max-w-[200px]" title={agent}>
+                        {agent}
+                      </span>
+                      <span className="text-[14px] font-semibold text-[#434447] bg-white px-3 py-1 rounded-full">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="h-px bg-[#E0E3E7] my-2" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] font-semibold text-[#212121]">Total</span>
+                    <span className="text-[14px] font-semibold text-[#434447] bg-[#434447] text-white px-3 py-1 rounded-full">
+                      {createdLinks.length}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info Dialog */}
       {showInfoDialog && (
