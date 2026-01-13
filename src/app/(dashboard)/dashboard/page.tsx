@@ -163,16 +163,6 @@ export default function DashboardPage() {
                   <span className="flex-1 text-[14px] text-[#212121]">
                     {getStatusDisplay(user.kyc_status)}
                   </span>
-                  {user.kyc_id && user.kyc_status === 'Approved' && (
-                    <button
-                      onClick={() => handleDownloadPDF(user)}
-                      disabled={downloadingPDF === user.id}
-                      className="flex items-center gap-1 text-[12px] text-[#57636C] hover:text-[#212121] disabled:opacity-50"
-                    >
-                      <span>PDF</span>
-                      <Download className="h-4 w-4" />
-                    </button>
-                  )}
                 </div>
 
                 {/* Divider */}
