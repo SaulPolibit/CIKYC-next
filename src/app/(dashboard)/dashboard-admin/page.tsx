@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, Info, User, Download, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllVerifiedUsers, filterVerifiedUsers } from '@/services/database';
+import { getAllVerifiedUsers, filterVerifiedUsers, deleteVerifiedUser } from '@/services/database';
 import { getToken, downloadPDF } from '@/services/api';
 import { ChoiceChips } from '@/components/choice-chips';
 import type { VerifiedUser, KYCStatusSpanish } from '@/types';
@@ -27,13 +27,14 @@ const getStatusDisplay = (status: string | null) => {
 
 export default function DashboardAdminPage() {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const [allUsers, setAllUsers] = useState<VerifiedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchString, setSearchString] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -68,6 +69,10 @@ export default function DashboardAdminPage() {
   };
 
   const handleDownloadPDF = async (user: VerifiedUser) => {
+    if (!isAdmin) {
+      alert('No tiene permisos para descargar PDFs.');
+      return;
+    }
     if (!user.kyc_id) return;
 
     setDownloadingPDF(user.id);
@@ -79,6 +84,28 @@ export default function DashboardAdminPage() {
       alert('Error al descargar el PDF. Intente nuevamente.');
     } finally {
       setDownloadingPDF(null);
+    }
+  };
+
+  const handleDelete = async (user: VerifiedUser) => {
+    if (!isAdmin) {
+      alert('No tiene permisos para eliminar registros.');
+      return;
+    }
+    if (!window.confirm(`¿Está seguro de eliminar el registro de ${user.name}?`)) {
+      return;
+    }
+
+    setDeletingId(user.id);
+    try {
+      await deleteVerifiedUser(user.id);
+      // Remove from local state
+      setAllUsers((prev) => prev.filter((u) => u.id !== user.id));
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert('Error al eliminar el registro. Intente nuevamente.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -182,7 +209,7 @@ export default function DashboardAdminPage() {
                     {getStatusDisplay(user.kyc_status)}
                   </span>
                   <div className="flex items-center gap-2">
-                    {user.kyc_id && user.kyc_status === 'Approved' && (
+                    {isAdmin && user.kyc_id && user.kyc_status === 'Approved' && (
                       <button
                         onClick={() => handleDownloadPDF(user)}
                         disabled={downloadingPDF === user.id}
@@ -192,12 +219,20 @@ export default function DashboardAdminPage() {
                         <Download className="h-4 w-4" />
                       </button>
                     )}
-                    <button
-                      className="p-1 text-[#57636C] hover:text-[#FF5963]"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDelete(user)}
+                        disabled={deletingId === user.id}
+                        className="p-1 text-[#57636C] hover:text-[#FF5963] disabled:opacity-50"
+                        title="Eliminar"
+                      >
+                        {deletingId === user.id ? (
+                          <div className="h-4 w-4 border-2 border-[#FF5963] border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
 

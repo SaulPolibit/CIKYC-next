@@ -142,6 +142,15 @@ export async function updateVerifiedUserStatus(
   if (error) throw error;
 }
 
+export async function deleteVerifiedUser(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('verified_users')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // Filter verified users by status and search string
 export function filterVerifiedUsers(
   users: VerifiedUser[],
